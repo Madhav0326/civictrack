@@ -170,10 +170,11 @@ export default async function HomePage() {
             ))}
           </div>
           <div className="mt-8 text-center">
-            <Link href="/categories">
-              <Button variant="outline">View All Categories</Button>
+            <Link href="/issues">
+              <Button variant="outline">Browse Issues by Category</Button>
             </Link>
           </div>
+
         </div>
       </section>
 
