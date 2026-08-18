@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Loader2, MessageSquare, Send, Trash2, ShieldCheck, User } from 'lucide-react';
+import { Loader2, MessageSquare, Send, Trash2, ShieldCheck, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/components/providers/auth-provider';
 import { supabase } from '@/lib/supabase/client';
 import { formatRelativeTime } from '@/lib/format';
@@ -31,15 +32,36 @@ export function IssueComments({
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    setError(null);
+
+    // Primary query with explicit FK relationship hint
+    const { data, error: primaryErr } = await supabase
       .from('issue_comments')
-      .select('*, profiles:profiles(*)')
+      .select('*, profiles:profiles!issue_comments_user_id_profiles_fkey(*)')
       .eq('issue_id', issueId)
       .eq('is_deleted', false)
       .order('created_at', { ascending: true });
 
-    if (error) setError(error.message);
-    else setComments((data ?? []) as IssueComment[]);
+    if (primaryErr) {
+      console.warn('[IssueComments] Primary FK query warning, trying general embed:', primaryErr.message);
+      // Fallback query
+      const { data: fallbackData, error: fallbackErr } = await supabase
+        .from('issue_comments')
+        .select('*, profiles:profiles(*)')
+        .eq('issue_id', issueId)
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: true });
+
+      if (fallbackErr) {
+        console.error('[IssueComments] Comment query error:', fallbackErr.message);
+        setError(`Unable to load discussion comments (${fallbackErr.message})`);
+        setComments([]);
+      } else {
+        setComments((fallbackData ?? []) as IssueComment[]);
+      }
+    } else {
+      setComments((data ?? []) as IssueComment[]);
+    }
     setLoading(false);
   }, [issueId]);
 
@@ -56,8 +78,9 @@ export function IssueComments({
       user_id: user.id,
       body: body.trim(),
     });
-    if (error) setError(error.message);
-    else {
+    if (error) {
+      setError(`Failed to post comment: ${error.message}`);
+    } else {
       setBody('');
       await load();
     }
@@ -66,8 +89,11 @@ export function IssueComments({
 
   const remove = async (id: string) => {
     const { error } = await supabase.from('issue_comments').delete().eq('id', id);
-    if (error) setError(error.message);
-    else setComments((items) => items.filter((item) => item.id !== id));
+    if (error) {
+      setError(`Failed to delete comment: ${error.message}`);
+    } else {
+      setComments((items) => items.filter((item) => item.id !== id));
+    }
   };
 
   const redirectUrl = publicId ? `/issues/${publicId}` : `/issues`;
@@ -102,11 +128,16 @@ export function IssueComments({
           </p>
         )}
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
         {loading ? (
           <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
-        ) : !comments.length ? (
+        ) : !error && !comments.length ? (
           <div className="py-5 text-center text-sm text-muted-foreground">
             <MessageSquare className="mx-auto mb-2 h-5 w-5" />
             No comments yet.
