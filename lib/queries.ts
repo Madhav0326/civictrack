@@ -402,18 +402,32 @@ export async function updateProfile(
 
 export async function updateIssue(
   issueId: string,
-  updates: Partial<Pick<Issue, 'title' | 'description' | 'severity' | 'category_id' | 'subcategory_id' | 'state_id' | 'district_id' | 'city_id' | 'locality_id' | 'address' | 'pincode' | 'location_privacy' | 'date_started' | 'frequency' | 'people_affected_estimate' | 'reference_number'>>
+  updates: Partial<Pick<Issue, 'title' | 'description' | 'severity' | 'category_id' | 'subcategory_id' | 'state_id' | 'district_id' | 'city_id' | 'locality_id' | 'address' | 'pincode' | 'date_started' | 'frequency' | 'people_affected_estimate'>>
 ): Promise<Issue> {
-  const { data, error } = await supabase
-    .from('issues')
-    .update(updates)
-    .eq('id', issueId)
-    .select(ISSUE_SELECT)
-    .single();
+  const { data, error } = await supabase.rpc('citizen_edit_issue', {
+    p_issue_id: issueId,
+    p_title: updates.title ?? null,
+    p_description: updates.description ?? null,
+    p_category_id: updates.category_id ?? null,
+    p_subcategory_id: updates.subcategory_id ?? null,
+    p_severity: updates.severity ?? null,
+    p_state_id: updates.state_id ?? null,
+    p_district_id: updates.district_id ?? null,
+    p_city_id: updates.city_id ?? null,
+    p_locality_id: updates.locality_id ?? null,
+    p_address: updates.address ?? null,
+    p_pincode: updates.pincode ?? null,
+    p_date_started: updates.date_started ?? null,
+    p_frequency: updates.frequency ?? null,
+    p_people_affected: updates.people_affected_estimate ?? null,
+  });
 
   if (error) throw error;
-  return data as Issue;
+
+  const refreshed = await fetchIssueByPublicId((data as Issue).public_id, { includeHidden: true });
+  return refreshed ?? (data as Issue);
 }
+
 
 export async function deleteIssue(issueId: string): Promise<boolean> {
   const { error } = await supabase

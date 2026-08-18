@@ -58,7 +58,9 @@ export function IssueDetail({ issue: initialIssue, categories = [], states = [] 
   const [error, setError] = useState<string | null>(null);
 
   const isOwner = user?.id === issue.user_id;
-  const canEdit = isOwner && ['reported', 'under_review', 'acknowledged', 'reopened'].includes(issue.status);
+  const isEditableStatus = ['reported', 'under_review', 'acknowledged', 'reopened'].includes(issue.status);
+  const remainingEdits = Math.max(0, 3 - (issue.edit_count ?? 0));
+  const canEdit = isOwner && isEditableStatus && remainingEdits > 0;
   const canDelete = isOwner && issue.status === 'reported';
 
   const loadData = useCallback(async () => {
@@ -138,15 +140,15 @@ export function IssueDetail({ issue: initialIssue, categories = [], states = [] 
         </Alert>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-        <div>
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <Badge variant="secondary" className="font-mono">{issue.public_id}</Badge>
+      {/* Header section */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-sm font-bold text-primary">{issue.public_id}</span>
             <StatusBadge status={issue.status} />
             <SeverityBadge severity={issue.severity} />
             {issue.is_sensitive && (
-              <Badge variant="outline" className="border-orange-200 bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300">
+              <Badge variant="destructive" className="text-xs">
                 <AlertCircle className="mr-1 h-3 w-3" /> Sensitive
               </Badge>
             )}
@@ -172,8 +174,8 @@ export function IssueDetail({ issue: initialIssue, categories = [], states = [] 
 
         {/* Owner Controls */}
         {isOwner && (
-          <div className="flex items-center gap-2 shrink-0">
-            {canEdit && (
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {canEdit ? (
               <Button
                 variant="outline"
                 size="sm"
@@ -181,8 +183,18 @@ export function IssueDetail({ issue: initialIssue, categories = [], states = [] 
                 onClick={() => setEditDialogOpen(true)}
               >
                 <Edit3 className="h-4 w-4" /> Edit Issue
+                <span className="text-xs text-muted-foreground font-normal">({remainingEdits} left)</span>
               </Button>
+            ) : isEditableStatus && remainingEdits <= 0 ? (
+              <Badge variant="outline" className="gap-1.5 py-1 text-xs text-amber-700 dark:text-amber-300 border-amber-500/30 bg-amber-500/10">
+                <Lock className="h-3.5 w-3.5" /> Edit limit reached (3/3 used)
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="gap-1.5 py-1 text-xs text-muted-foreground bg-secondary/50">
+                <Lock className="h-3.5 w-3.5" /> Editing locked ({issue.status.replace('_', ' ')})
+              </Badge>
             )}
+
             {canDelete && (
               <Button
                 variant="outline"

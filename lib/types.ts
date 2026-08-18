@@ -110,7 +110,9 @@ export interface Issue {
   resolved_at: string | null;
   department_name?: string | null;
   assigned_to?: string | null;
+  edit_count?: number;
   created_at: string;
+
 
   updated_at: string;
   category?: Category;

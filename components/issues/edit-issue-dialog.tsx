@@ -187,12 +187,11 @@ export function EditIssueDialog({
         locality_id: localityId ?? null,
         address: address.trim() || null,
         pincode: pincode.trim() || null,
-        location_privacy: privacy,
         date_started: dateStarted || null,
         frequency: frequency || null,
         people_affected_estimate: peopleAffected ? Number(peopleAffected) : null,
-        reference_number: referenceNumber.trim() || null,
       });
+
 
       // 2. Upload any additional evidence files
       if (newFiles.length > 0) {
@@ -232,11 +231,19 @@ export function EditIssueDialog({
     }
   };
 
+  const remainingEdits = Math.max(0, 3 - (issue.edit_count ?? 0));
+  const isLimitedEdit = ['under_review', 'acknowledged', 'reopened'].includes(issue.status);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Issue Details</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>Edit Issue Details</DialogTitle>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+              {remainingEdits} {remainingEdits === 1 ? 'edit' : 'edits'} remaining
+            </span>
+          </div>
           <DialogDescription>
             Update permitted details for issue {issue.public_id}.
           </DialogDescription>
@@ -250,6 +257,15 @@ export function EditIssueDialog({
             </Alert>
           )}
 
+          {isLimitedEdit && (
+            <Alert className="border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300 text-xs">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <AlertDescription>
+                This issue is currently under authority review. Core routing fields (title, category, location) are locked to maintain department assignment.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Title */}
           <div className="space-y-1.5">
             <Label htmlFor="edit-title">Issue Title</Label>
@@ -259,9 +275,11 @@ export function EditIssueDialog({
               onChange={(e) => setTitle(e.target.value)}
               minLength={10}
               maxLength={160}
+              disabled={isLimitedEdit}
               required
             />
           </div>
+
 
           {/* Description */}
           <div className="space-y-1.5">
@@ -287,6 +305,7 @@ export function EditIssueDialog({
                   setCategoryId(idFrom(val));
                   setSubcategoryId(undefined);
                 }}
+                disabled={isLimitedEdit}
               >
                 <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                 <SelectContent>
@@ -304,6 +323,7 @@ export function EditIssueDialog({
               <Select
                 value={severity}
                 onValueChange={(val) => setSeverity(val as IssueSeverity)}
+                disabled={isLimitedEdit}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -333,7 +353,9 @@ export function EditIssueDialog({
                     setCityId(undefined);
                     setLocalityId(undefined);
                   }}
+                  disabled={isLimitedEdit}
                 >
+
                   <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Select state / UT</SelectItem>
