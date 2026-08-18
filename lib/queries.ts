@@ -132,17 +132,46 @@ export async function fetchIssues(params: IssueQueryParams = {}) {
   };
 }
 
-export async function fetchIssueByPublicId(publicId: string): Promise<Issue | null> {
-  const { data, error } = await supabase
+export async function fetchIssueByPublicId(
+  publicId: string,
+  options?: { includeHidden?: boolean }
+): Promise<Issue | null> {
+  if (!publicId) return null;
+  const cleanId = publicId.trim();
+
+  let query = supabase
     .from('issues')
     .select(ISSUE_SELECT)
-    .eq('public_id', publicId)
-    .eq('is_hidden', false)
-    .maybeSingle();
+    .ilike('public_id', cleanId);
 
-  if (error) throw error;
+  if (!options?.includeHidden) {
+    query = query.eq('is_hidden', false);
+  }
+
+  const { data, error } = await query.maybeSingle();
+
+  if (error) {
+    console.warn('[fetchIssueByPublicId] Primary join query error, executing fallback:', error.message);
+    let fallbackQuery = supabase
+      .from('issues')
+      .select(ISSUE_LIST_SELECT)
+      .ilike('public_id', cleanId);
+
+    if (!options?.includeHidden) {
+      fallbackQuery = fallbackQuery.eq('is_hidden', false);
+    }
+
+    const fallback = await fallbackQuery.maybeSingle();
+    if (fallback.error) {
+      console.error('[fetchIssueByPublicId] Fallback query failed:', fallback.error);
+      throw fallback.error;
+    }
+    return fallback.data as Issue | null;
+  }
+
   return data as Issue | null;
 }
+
 
 export async function fetchCategories(): Promise<Category[]> {
   const { data, error } = await supabase
