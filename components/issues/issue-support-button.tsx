@@ -74,50 +74,105 @@ export function IssueSupportButton({ issueId, publicId, initialCount = 0 }: Issu
   }, [issueId, user?.id]);
 
   const toggle = async () => {
-    if (!user) {
+    // 1. Verify current authenticated session directly from Supabase client
+    const { data: { user: currentUser }, error: authErr } = await supabase.auth.getUser();
+
+    const activeUser = currentUser || user;
+
+    if (!activeUser || authErr) {
+      console.warn('[IssueSupportButton] No active auth session:', authErr?.message);
       router.push(`/login?redirect=/issues/${publicId || issueId}`);
       return;
     }
-    if (saving) return;
 
+    if (saving) return;
     setSaving(true);
+
     const wasSupported = supported;
 
-    const request = wasSupported
-      ? supabase.from('issue_supporters').delete().eq('issue_id', issueId).eq('user_id', user.id)
-      : supabase
-          .from('issue_supporters')
-          .insert({ issue_id: issueId, user_id: user.id })
-          .select();
-
-    const { error } = await request;
-
-    if (error) {
-      console.error('[IssueSupportButton] Error toggling support:', {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-      });
-      toast({
-        title: 'Action failed',
-        description: 'Unable to update your action. Please try again.',
-        variant: 'destructive',
-      });
-    } else {
-      const nextSupported = !wasSupported;
-      setSupported(nextSupported);
-
-      // Re-fetch authoritative count from database
-      const { count: freshCount, error: freshError } = await supabase
+    if (!wasSupported) {
+      // Perform INSERT
+      const { data, error } = await supabase
         .from('issue_supporters')
-        .select('id', { count: 'exact', head: true })
-        .eq('issue_id', issueId);
+        .insert({ issue_id: issueId, user_id: activeUser.id })
+        .select();
 
-      if (!freshError && freshCount !== null && freshCount !== undefined) {
-        setCount(freshCount);
+      console.log('[IssueSupportButton] INSERT RESULT', {
+        issueId,
+        userId: activeUser.id,
+        data,
+        error: error
+          ? {
+              code: error.code,
+              message: error.message,
+              details: error.details,
+              hint: error.hint,
+            }
+          : null,
+      });
+
+      if (error && error.code !== '23505') {
+        // Real DB error (not duplicate)
+        toast({
+          title: 'Action failed',
+          description: 'Unable to update your action. Please try again.',
+          variant: 'destructive',
+        });
       } else {
-        setCount((prev) => Math.max(0, prev + (wasSupported ? -1 : 1)));
+        // Success or already supported (23505)
+        setSupported(true);
+        const { count: freshCount } = await supabase
+          .from('issue_supporters')
+          .select('id', { count: 'exact', head: true })
+          .eq('issue_id', issueId);
+
+        if (freshCount !== null && freshCount !== undefined) {
+          setCount(freshCount);
+        } else {
+          setCount((prev) => prev + 1);
+        }
+      }
+    } else {
+      // Perform DELETE
+      const { data, error } = await supabase
+        .from('issue_supporters')
+        .delete()
+        .eq('issue_id', issueId)
+        .eq('user_id', activeUser.id)
+        .select();
+
+      console.log('[IssueSupportButton] DELETE RESULT', {
+        issueId,
+        userId: activeUser.id,
+        data,
+        error: error
+          ? {
+              code: error.code,
+              message: error.message,
+              details: error.details,
+              hint: error.hint,
+            }
+          : null,
+      });
+
+      if (error) {
+        toast({
+          title: 'Action failed',
+          description: 'Unable to update your action. Please try again.',
+          variant: 'destructive',
+        });
+      } else {
+        setSupported(false);
+        const { count: freshCount } = await supabase
+          .from('issue_supporters')
+          .select('id', { count: 'exact', head: true })
+          .eq('issue_id', issueId);
+
+        if (freshCount !== null && freshCount !== undefined) {
+          setCount(freshCount);
+        } else {
+          setCount((prev) => Math.max(0, prev - 1));
+        }
       }
     }
 

@@ -74,50 +74,105 @@ export function IssueFollowButton({ issueId, publicId, initialCount = 0 }: Issue
   }, [issueId, user?.id]);
 
   const toggle = async () => {
-    if (!user) {
+    // 1. Verify current authenticated session directly from Supabase client
+    const { data: { user: currentUser }, error: authErr } = await supabase.auth.getUser();
+
+    const activeUser = currentUser || user;
+
+    if (!activeUser || authErr) {
+      console.warn('[IssueFollowButton] No active auth session:', authErr?.message);
       router.push(`/login?redirect=/issues/${publicId || issueId}`);
       return;
     }
-    if (saving) return;
 
+    if (saving) return;
     setSaving(true);
+
     const wasFollowing = following;
 
-    const request = wasFollowing
-      ? supabase.from('issue_followers').delete().eq('issue_id', issueId).eq('user_id', user.id)
-      : supabase
-          .from('issue_followers')
-          .insert({ issue_id: issueId, user_id: user.id })
-          .select();
-
-    const { error } = await request;
-
-    if (error) {
-      console.error('[IssueFollowButton] Error toggling follow status:', {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-      });
-      toast({
-        title: 'Action failed',
-        description: 'Unable to update your action. Please try again.',
-        variant: 'destructive',
-      });
-    } else {
-      const nextFollowing = !wasFollowing;
-      setFollowing(nextFollowing);
-
-      // Re-fetch authoritative count from database
-      const { count: freshCount, error: freshError } = await supabase
+    if (!wasFollowing) {
+      // Perform INSERT
+      const { data, error } = await supabase
         .from('issue_followers')
-        .select('id', { count: 'exact', head: true })
-        .eq('issue_id', issueId);
+        .insert({ issue_id: issueId, user_id: activeUser.id })
+        .select();
 
-      if (!freshError && freshCount !== null && freshCount !== undefined) {
-        setCount(freshCount);
+      console.log('[IssueFollowButton] INSERT RESULT', {
+        issueId,
+        userId: activeUser.id,
+        data,
+        error: error
+          ? {
+              code: error.code,
+              message: error.message,
+              details: error.details,
+              hint: error.hint,
+            }
+          : null,
+      });
+
+      if (error && error.code !== '23505') {
+        // Real DB error (not duplicate)
+        toast({
+          title: 'Action failed',
+          description: 'Unable to update your action. Please try again.',
+          variant: 'destructive',
+        });
       } else {
-        setCount((prev) => Math.max(0, prev + (wasFollowing ? -1 : 1)));
+        // Success or already following (23505)
+        setFollowing(true);
+        const { count: freshCount } = await supabase
+          .from('issue_followers')
+          .select('id', { count: 'exact', head: true })
+          .eq('issue_id', issueId);
+
+        if (freshCount !== null && freshCount !== undefined) {
+          setCount(freshCount);
+        } else {
+          setCount((prev) => prev + 1);
+        }
+      }
+    } else {
+      // Perform DELETE
+      const { data, error } = await supabase
+        .from('issue_followers')
+        .delete()
+        .eq('issue_id', issueId)
+        .eq('user_id', activeUser.id)
+        .select();
+
+      console.log('[IssueFollowButton] DELETE RESULT', {
+        issueId,
+        userId: activeUser.id,
+        data,
+        error: error
+          ? {
+              code: error.code,
+              message: error.message,
+              details: error.details,
+              hint: error.hint,
+            }
+          : null,
+      });
+
+      if (error) {
+        toast({
+          title: 'Action failed',
+          description: 'Unable to update your action. Please try again.',
+          variant: 'destructive',
+        });
+      } else {
+        setFollowing(false);
+        const { count: freshCount } = await supabase
+          .from('issue_followers')
+          .select('id', { count: 'exact', head: true })
+          .eq('issue_id', issueId);
+
+        if (freshCount !== null && freshCount !== undefined) {
+          setCount(freshCount);
+        } else {
+          setCount((prev) => Math.max(0, prev - 1));
+        }
       }
     }
 
