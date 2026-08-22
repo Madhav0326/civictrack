@@ -223,8 +223,34 @@ export async function fetchCities(districtId: number): Promise<GeoCity[]> {
     .order('name', { ascending: true });
 
   if (error) throw error;
-  return data as GeoCity[];
+
+  if (data && data.length > 0) {
+    return data as GeoCity[];
+  }
+
+  // Fallback: If no explicit sub-cities are recorded for this district, return default city entry matching the district
+  const { data: districtData } = await supabase
+    .from('geo_districts')
+    .select('*')
+    .eq('id', districtId)
+    .maybeSingle();
+
+  if (districtData) {
+    return [
+      {
+        id: districtData.id,
+        district_id: districtData.id,
+        name: districtData.name,
+        latitude: districtData.latitude,
+        longitude: districtData.longitude,
+        created_at: new Date().toISOString(),
+      } as GeoCity,
+    ];
+  }
+
+  return [];
 }
+
 
 export async function fetchLocalities(cityId: number): Promise<GeoLocality[]> {
   const { data, error } = await supabase
