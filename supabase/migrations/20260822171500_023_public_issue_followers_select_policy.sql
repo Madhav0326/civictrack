@@ -1,4 +1,5 @@
--- Migration 023: Allow public SELECT on issue_followers and issue_supporters for non-hidden issues
+-- Migration 023: Allow public SELECT on issue_followers and issue_supporters for non-hidden issues,
+-- and run issue count triggers with definer privileges.
 -- Preserves all previous migrations 001-022. Idempotent and non-destructive.
 
 DO $$
@@ -32,3 +33,16 @@ BEGIN
       )
     );
 END $$;
+
+-- 3. Security Definer privileges for issue count trigger functions
+ALTER FUNCTION public.update_supporter_count()
+  SECURITY DEFINER;
+
+ALTER FUNCTION public.update_supporter_count()
+  SET search_path = public;
+
+ALTER FUNCTION public.update_follower_count()
+  SECURITY DEFINER;
+
+ALTER FUNCTION public.update_follower_count()
+  SET search_path = public;
