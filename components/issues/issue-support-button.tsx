@@ -22,7 +22,7 @@ export function IssueSupportButton({ issueId, publicId, initialCount = 0 }: Issu
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setCount(initialCount);
+    let isMounted = true;
 
     const fetchState = async () => {
       // 1. Fetch exact total supporter count
@@ -38,12 +38,12 @@ export function IssueSupportButton({ issueId, publicId, initialCount = 0 }: Issu
           hint: countError.hint,
           code: countError.code,
         });
-      } else if (exactCount !== null && exactCount !== undefined) {
+      } else if (isMounted && exactCount !== null && exactCount !== undefined) {
         setCount(exactCount);
       }
 
       // 2. Fetch current logged in user support status
-      if (user) {
+      if (user?.id) {
         const { data, error: userError } = await supabase
           .from('issue_supporters')
           .select('id')
@@ -58,16 +58,20 @@ export function IssueSupportButton({ issueId, publicId, initialCount = 0 }: Issu
             hint: userError.hint,
             code: userError.code,
           });
-        } else {
+        } else if (isMounted) {
           setSupported(Boolean(data));
         }
-      } else {
+      } else if (isMounted) {
         setSupported(false);
       }
     };
 
     fetchState();
-  }, [issueId, user, initialCount]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [issueId, user?.id]);
 
   const toggle = async () => {
     if (!user) {
@@ -78,11 +82,6 @@ export function IssueSupportButton({ issueId, publicId, initialCount = 0 }: Issu
 
     setSaving(true);
     const wasSupported = supported;
-    const nextSupported = !wasSupported;
-
-    // Optimistic UI state
-    setSupported(nextSupported);
-    setCount((current) => Math.max(0, current + (wasSupported ? -1 : 1)));
 
     const request = wasSupported
       ? supabase.from('issue_supporters').delete().eq('issue_id', issueId).eq('user_id', user.id)
@@ -105,18 +104,20 @@ export function IssueSupportButton({ issueId, publicId, initialCount = 0 }: Issu
         description: 'Unable to update your action. Please try again.',
         variant: 'destructive',
       });
-      // Revert optimistic change on error
-      setSupported(wasSupported);
-      setCount((current) => Math.max(0, current + (wasSupported ? 1 : -1)));
     } else {
+      const nextSupported = !wasSupported;
+      setSupported(nextSupported);
+
       // Re-fetch authoritative count from database
-      const { count: freshCount } = await supabase
+      const { count: freshCount, error: freshError } = await supabase
         .from('issue_supporters')
         .select('id', { count: 'exact', head: true })
         .eq('issue_id', issueId);
 
-      if (freshCount !== null && freshCount !== undefined) {
+      if (!freshError && freshCount !== null && freshCount !== undefined) {
         setCount(freshCount);
+      } else {
+        setCount((prev) => Math.max(0, prev + (wasSupported ? -1 : 1)));
       }
     }
 
