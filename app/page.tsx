@@ -2,54 +2,14 @@ import Link from 'next/link';
 import { ArrowRight, Users, CheckCircle2, Clock, AlertCircle, TrendingUp, FileSearch, MapPin, Lightbulb, ShieldCheck, Eye, Vote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { supabase } from '@/lib/supabase/client';
 import { formatNumber, formatPercentage } from '@/lib/format';
+import { fetchPlatformStats } from '@/lib/queries';
 
-async function getStats() {
-  const { count: total } = await supabase
-    .from('issues')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_hidden', false);
-
-  const { count: resolved } = await supabase
-    .from('issues')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'resolved')
-    .eq('is_hidden', false);
-
-  const { count: inProgress } = await supabase
-    .from('issues')
-    .select('*', { count: 'exact', head: true })
-    .in('status', ['in_progress', 'acknowledged', 'under_review'])
-    .eq('is_hidden', false);
-
-  const { count: pending } = await supabase
-    .from('issues')
-    .select('*', { count: 'exact', head: true })
-    .in('status', ['reported', 'reopened'])
-    .eq('is_hidden', false);
-
-  const { count: citizens } = await supabase
-    .from('profiles')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_banned', false);
-
-  const totalNum = total ?? 0;
-  const resolvedNum = resolved ?? 0;
-  const resolutionRate = totalNum > 0 ? (resolvedNum / totalNum) * 100 : 0;
-
-  return {
-    total: totalNum,
-    resolved: resolvedNum,
-    inProgress: inProgress ?? 0,
-    pending: pending ?? 0,
-    citizens: citizens ?? 0,
-    resolutionRate,
-  };
-}
+export const revalidate = 0;
+export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const stats = await getStats();
+  const stats = await fetchPlatformStats();
 
   return (
     <div className="flex flex-col">

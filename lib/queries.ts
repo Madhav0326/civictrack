@@ -263,6 +263,44 @@ export async function fetchLocalities(cityId: number): Promise<GeoLocality[]> {
   return data as GeoLocality[];
 }
 
+export interface PlatformStats {
+  total: number;
+  resolved: number;
+  inProgress: number;
+  pending: number;
+  citizens: number;
+  resolutionRate: number;
+}
+
+export async function fetchPlatformStats(): Promise<PlatformStats> {
+  const [
+    { count: total },
+    { count: resolved },
+    { count: inProgress },
+    { count: pending },
+    { count: citizens },
+  ] = await Promise.all([
+    supabase.from('issues').select('*', { count: 'exact', head: true }).eq('is_hidden', false),
+    supabase.from('issues').select('*', { count: 'exact', head: true }).eq('is_hidden', false).eq('status', 'resolved'),
+    supabase.from('issues').select('*', { count: 'exact', head: true }).eq('is_hidden', false).in('status', ['in_progress', 'acknowledged', 'under_review']),
+    supabase.from('issues').select('*', { count: 'exact', head: true }).eq('is_hidden', false).in('status', ['reported', 'reopened']),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('is_banned', false),
+  ]);
+
+  const totalNum = total ?? 0;
+  const resolvedNum = resolved ?? 0;
+  const resolutionRate = totalNum > 0 ? (resolvedNum / totalNum) * 100 : 0;
+
+  return {
+    total: totalNum,
+    resolved: resolvedNum,
+    inProgress: inProgress ?? 0,
+    pending: pending ?? 0,
+    citizens: citizens ?? 0,
+    resolutionRate,
+  };
+}
+
 export interface DashboardStats {
   total: number;
   resolved: number;
