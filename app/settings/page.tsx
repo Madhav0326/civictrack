@@ -22,6 +22,8 @@ export default function SettingsPage() {
   const { user, profile, loading: authLoading, signOut, refreshProfile } = useAuth();
 
   // Password state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -69,29 +71,65 @@ export default function SettingsPage() {
     setPasswordError(null);
     setPasswordSuccess(null);
 
+    if (!user || !user.email) {
+      setPasswordError('Your session has expired. Please sign in again.');
+      return;
+    }
+
+    if (!currentPassword) {
+      setPasswordError('Please enter your current password.');
+      return;
+    }
+
     if (!isValidPassword(password)) {
       setPasswordError('Please ensure your new password meets all security requirements.');
       return;
     }
 
+    if (currentPassword === password) {
+      setPasswordError('New password must be different from your current password.');
+      return;
+    }
+
     if (password !== confirmPassword) {
-      setPasswordError('Passwords do not match.');
+      setPasswordError('New passwords do not match.');
       return;
     }
 
     setPasswordLoading(true);
 
-    const { error: updateErr } = await supabase.auth.updateUser({ password });
+    try {
+      // 1. Verify current password against Supabase Auth
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
 
-    setPasswordLoading(false);
-    if (updateErr) {
-      setPasswordError(updateErr.message);
-    } else {
-      setPasswordSuccess('Password changed successfully!');
-      setPassword('');
-      setConfirmPassword('');
+      if (signInErr) {
+        setPasswordLoading(false);
+        setPasswordError('Your current password is incorrect. Please try again.');
+        return;
+      }
+
+      // 2. Update password securely via Supabase Auth API
+      const { error: updateErr } = await supabase.auth.updateUser({ password });
+
+      setPasswordLoading(false);
+
+      if (updateErr) {
+        setPasswordError(updateErr.message);
+      } else {
+        setPasswordSuccess('Password changed successfully!');
+        setCurrentPassword('');
+        setPassword('');
+        setConfirmPassword('');
+      }
+    } catch {
+      setPasswordLoading(false);
+      setPasswordError('An unexpected error occurred while changing your password.');
     }
   };
+
 
   const handlePrivacyToggle = async (isPrivate: boolean) => {
     setPrivacyError(null);
@@ -231,6 +269,33 @@ export default function SettingsPage() {
               </Alert>
             )}
 
+            {/* 1. Current Password */}
+            <div className="space-y-2">
+              <Label htmlFor="current-password">Current Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="current-password"
+                  type={showCurrentPassword ? 'text' : 'password'}
+                  placeholder="Enter your current password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="pl-10 pr-10"
+                  required
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label={showCurrentPassword ? 'Hide current password' : 'Show current password'}
+                >
+                  {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* 2. New Password */}
             <div className="space-y-2">
               <Label htmlFor="new-password">New Password</Label>
               <div className="relative">
@@ -254,31 +319,34 @@ export default function SettingsPage() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+            </div>
 
+            {/* 3. Password Requirements */}
+            <div className="space-y-2 rounded-lg border bg-muted/30 p-3 text-xs">
+              <div className="flex items-center justify-between font-medium">
+                <span className="text-muted-foreground">Password requirements:</span>
+                {password.length > 0 && (
+                  <span className="font-semibold text-foreground">
+                    Strength: <span className="text-primary">{strength?.label}</span>
+                  </span>
+                )}
+              </div>
               {password.length > 0 && (
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Password strength:</span>
-                    <span className="font-medium">{strength?.label}</span>
-                  </div>
-                  <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-300 ${strength?.className}`}
-                      style={{
-                        width:
-                          strength?.label === 'Weak'
-                            ? '33%'
-                            : strength?.label === 'Fair'
-                            ? '66%'
-                            : '100%',
-                      }}
-                    />
-                  </div>
+                <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-300 ${strength?.className}`}
+                    style={{
+                      width:
+                        strength?.label === 'Weak'
+                          ? '33%'
+                          : strength?.label === 'Fair'
+                          ? '66%'
+                          : '100%',
+                    }}
+                  />
                 </div>
               )}
-
-              <div className="space-y-1 rounded-md bg-muted/40 p-2.5 text-xs">
-                <p className="font-medium text-muted-foreground mb-1">Password requirements:</p>
+              <div className="space-y-1.5 pt-1">
                 {PASSWORD_REQUIREMENTS.map((req, idx) => {
                   const passed = req.test(password);
                   return (
@@ -297,6 +365,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
+            {/* 4. Confirm New Password */}
             <div className="space-y-2">
               <Label htmlFor="confirm-new-password">Confirm New Password</Label>
               <div className="relative">
@@ -321,15 +390,21 @@ export default function SettingsPage() {
                 </button>
               </div>
               {!passwordsMatch && (
-                <p className="text-xs text-destructive">Passwords do not match.</p>
+                <p className="text-xs text-destructive">New passwords do not match.</p>
               )}
             </div>
 
+            {/* 5. Submit Button */}
             <Button
               type="submit"
-              disabled={passwordLoading || !isValidPassword(password) || password !== confirmPassword}
+              disabled={
+                passwordLoading ||
+                !currentPassword ||
+                !isValidPassword(password) ||
+                password !== confirmPassword
+              }
             >
-              {passwordLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Update Password'}
+              {passwordLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Change Password'}
             </Button>
           </form>
         </CardContent>
