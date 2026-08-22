@@ -44,8 +44,10 @@ export function IssueReportForm({ categories, states }: { categories: Category[]
   const [subcategoryId, setSubcategoryId] = useState<number>();
   const [stateId, setStateId] = useState<number>();
   const [districtId, setDistrictId] = useState<number>();
-  const [cityId, setCityId] = useState<number>();
-  const [localityId, setLocalityId] = useState<number>();
+  const [cityId, setCityId] = useState<number | 'other'>();
+  const [customCity, setCustomCity] = useState('');
+  const [localityId, setLocalityId] = useState<number | 'other'>();
+  const [customLocality, setCustomLocality] = useState('');
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -124,7 +126,7 @@ export function IssueReportForm({ categories, states }: { categories: Category[]
   }, [districtId]);
 
   useEffect(() => {
-    if (!cityId) {
+    if (!cityId || typeof cityId !== 'number') {
       setLocalities([]);
       setLocalityId(undefined);
       return;
@@ -171,7 +173,12 @@ export function IssueReportForm({ categories, states }: { categories: Category[]
       .insert({
         user_id: user.id, category_id: categoryId, subcategory_id: subcategoryId ?? null,
         title: title.trim(), description: description.trim(), severity, status: 'reported',
-        state_id: stateId, district_id: districtId ?? null, city_id: cityId ?? null, locality_id: localityId ?? null,
+        state_id: stateId,
+        district_id: districtId ?? null,
+        city_id: typeof cityId === 'number' ? cityId : null,
+        custom_city: cityId === 'other' ? (customCity.trim() || null) : null,
+        locality_id: typeof localityId === 'number' ? localityId : null,
+        custom_locality: localityId === 'other' || customLocality.trim() ? (customLocality.trim() || null) : null,
         address: address.trim() || null, pincode: pincode.trim() || null, location_privacy: privacy,
         date_started: dateStarted || null, frequency: frequency || null,
         people_affected_estimate: peopleAffected ? Number(peopleAffected) : null,
@@ -279,69 +286,97 @@ export function IssueReportForm({ categories, states }: { categories: Category[]
               )}
             </SelectField>
 
-            <SelectField
-              label="City / Town (optional)"
-              value={cityId ? String(cityId) : 'none'}
-              onValueChange={(value) => {
-                const newId = idFrom(value);
-                setCityId(newId);
-                setLocalityId(undefined);
-              }}
-              disabled={!districtId || loadingCities}
-            >
-              {loadingCities ? (
-                <SelectItem value="none" disabled>
-                  Loading cities...
-                </SelectItem>
-              ) : !districtId ? (
-                <SelectItem value="none" disabled>
-                  Select a district first
-                </SelectItem>
-              ) : cities.length === 0 ? (
-                <SelectItem value="none" disabled>
-                  No cities recorded for this district
-                </SelectItem>
-              ) : (
-                <>
-                  <SelectItem value="none">Select a city / town</SelectItem>
-                  {cities.map((city) => (
-                    <SelectItem key={city.id} value={String(city.id)}>
-                      {city.name}
-                    </SelectItem>
-                  ))}
-                </>
-              )}
-            </SelectField>
+            <div className="space-y-2">
+              <SelectField
+                label="City / Town (optional)"
+                value={cityId === 'other' ? 'other' : cityId ? String(cityId) : 'none'}
+                onValueChange={(value) => {
+                  if (value === 'other') {
+                    setCityId('other' as any);
+                  } else {
+                    const newId = idFrom(value);
+                    setCityId(newId);
+                  }
+                  setLocalityId(undefined);
+                  setCustomCity('');
+                  setCustomLocality('');
+                }}
+                disabled={!districtId || loadingCities}
+              >
+                {loadingCities ? (
+                  <SelectItem value="none" disabled>
+                    Loading cities...
+                  </SelectItem>
+                ) : !districtId ? (
+                  <SelectItem value="none" disabled>
+                    Select a district first
+                  </SelectItem>
+                ) : (
+                  <>
+                    <SelectItem value="none">Select a city / town</SelectItem>
+                    {cities.map((city) => (
+                      <SelectItem key={city.id} value={String(city.id)}>
+                        {city.name}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="other">Other / Not listed...</SelectItem>
+                  </>
+                )}
+              </SelectField>
 
-            <SelectField
-              label="Locality / Area (optional)"
-              value={localityId ? String(localityId) : 'none'}
-              onValueChange={(value) => setLocalityId(idFrom(value))}
-              disabled={!cityId || loadingLocalities}
-            >
-              {loadingLocalities ? (
-                <SelectItem value="none" disabled>
-                  Loading localities...
-                </SelectItem>
-              ) : !cityId ? (
-                <SelectItem value="none" disabled>
-                  Select a city first
-                </SelectItem>
-              ) : localities.length === 0 ? (
-                <SelectItem value="none" disabled>
-                  No localities recorded for this city
-                </SelectItem>
-              ) : (
-                <>
-                  <SelectItem value="none">Select a locality / area</SelectItem>
-                  {localities.map((locality) => (
-                    <SelectItem key={locality.id} value={String(locality.id)}>
-                      {locality.name}
-                    </SelectItem>
-                  ))}
-                </>
+              {cityId === ('other' as any) && (
+                <Input
+                  placeholder="Enter your City / Town name"
+                  value={customCity}
+                  onChange={(e) => setCustomCity(e.target.value)}
+                  className="mt-2"
+                />
               )}
-            </SelectField>
+            </div>
+
+            <div className="space-y-2">
+              <SelectField
+                label="Locality / Area (optional)"
+                value={localityId === 'other' ? 'other' : localityId ? String(localityId) : 'none'}
+                onValueChange={(value) => {
+                  if (value === 'other') {
+                    setLocalityId('other' as any);
+                  } else {
+                    setLocalityId(idFrom(value));
+                  }
+                }}
+                disabled={!cityId || loadingLocalities}
+              >
+                {loadingLocalities ? (
+                  <SelectItem value="none" disabled>
+                    Loading localities...
+                  </SelectItem>
+                ) : !cityId ? (
+                  <SelectItem value="none" disabled>
+                    Select a city first
+                  </SelectItem>
+                ) : (
+                  <>
+                    <SelectItem value="none">Select a locality / area</SelectItem>
+                    {localities.map((locality) => (
+                      <SelectItem key={locality.id} value={String(locality.id)}>
+                        {locality.name}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="other">Other / Not listed...</SelectItem>
+                  </>
+                )}
+              </SelectField>
+
+              {localityId === ('other' as any) && (
+                <Input
+                  placeholder="Enter Locality / Area / Neighborhood name"
+                  value={customLocality}
+                  onChange={(e) => setCustomLocality(e.target.value)}
+                  className="mt-2"
+                />
+              )}
+            </div>
           </div>
           <Field label="Address or landmark (optional)" htmlFor="address"><Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} maxLength={500} /></Field>
           <div className="grid gap-4 sm:grid-cols-2"><Field label="PIN code (optional)" htmlFor="pincode"><Input id="pincode" inputMode="numeric" value={pincode} onChange={(e) => setPincode(e.target.value)} maxLength={10} /></Field><SelectField label="Location privacy" value={privacy} onValueChange={(value) => setPrivacy(value as LocationPrivacy)}><SelectItem value="exact">Show exact location</SelectItem><SelectItem value="approximate">Show approximate area</SelectItem><SelectItem value="area_only">Show area only</SelectItem></SelectField></div>

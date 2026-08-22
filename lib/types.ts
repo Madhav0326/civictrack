@@ -93,6 +93,8 @@ export interface Issue {
   ward_id: number | null;
   locality_id: number | null;
   address: string | null;
+  custom_city?: string | null;
+  custom_locality?: string | null;
   latitude: number | null;
   longitude: number | null;
   pincode: string | null;

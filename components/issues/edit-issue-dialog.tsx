@@ -60,8 +60,14 @@ export function EditIssueDialog({
   // Geo states
   const [stateId, setStateId] = useState<number | undefined>(issue.state_id ?? undefined);
   const [districtId, setDistrictId] = useState<number | undefined>(issue.district_id ?? undefined);
-  const [cityId, setCityId] = useState<number | undefined>(issue.city_id ?? undefined);
-  const [localityId, setLocalityId] = useState<number | undefined>(issue.locality_id ?? undefined);
+  const [cityId, setCityId] = useState<number | 'other' | undefined>(
+    issue.city_id ?? (issue.custom_city ? 'other' : undefined)
+  );
+  const [customCity, setCustomCity] = useState(issue.custom_city ?? '');
+  const [localityId, setLocalityId] = useState<number | 'other' | undefined>(
+    issue.locality_id ?? (issue.custom_locality ? 'other' : undefined)
+  );
+  const [customLocality, setCustomLocality] = useState(issue.custom_locality ?? '');
 
   const [districts, setDistricts] = useState<GeoDistrict[]>([]);
   const [cities, setCities] = useState<GeoCity[]>([]);
@@ -133,7 +139,7 @@ export function EditIssueDialog({
 
   // Load dependent localities
   useEffect(() => {
-    if (!cityId) {
+    if (!cityId || typeof cityId !== 'number') {
       setLocalities([]);
       return;
     }
@@ -183,8 +189,10 @@ export function EditIssueDialog({
         subcategory_id: subcategoryId ?? null,
         state_id: stateId ?? null,
         district_id: districtId ?? null,
-        city_id: cityId ?? null,
-        locality_id: localityId ?? null,
+        city_id: typeof cityId === 'number' ? cityId : null,
+        custom_city: cityId === 'other' ? (customCity.trim() || null) : null,
+        locality_id: typeof localityId === 'number' ? localityId : null,
+        custom_locality: localityId === 'other' || customLocality.trim() ? (customLocality.trim() || null) : null,
         address: address.trim() || null,
         pincode: pincode.trim() || null,
         date_started: dateStarted || null,
@@ -390,9 +398,13 @@ export function EditIssueDialog({
               <div className="space-y-1">
                 <Label className="text-xs">City / Town</Label>
                 <Select
-                  value={cityId ? String(cityId) : 'none'}
+                  value={cityId === 'other' ? 'other' : cityId ? String(cityId) : 'none'}
                   onValueChange={(val) => {
-                    setCityId(idFrom(val));
+                    if (val === 'other') {
+                      setCityId('other' as any);
+                    } else {
+                      setCityId(idFrom(val));
+                    }
                     setLocalityId(undefined);
                   }}
                   disabled={!districtId || loadingCities}
@@ -403,15 +415,30 @@ export function EditIssueDialog({
                     {cities.map((c) => (
                       <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                     ))}
+                    <SelectItem value="other">Other / Not listed...</SelectItem>
                   </SelectContent>
                 </Select>
+                {cityId === ('other' as any) && (
+                  <Input
+                    placeholder="Enter City / Town name"
+                    value={customCity}
+                    onChange={(e) => setCustomCity(e.target.value)}
+                    className="mt-1 text-xs"
+                  />
+                )}
               </div>
 
               <div className="space-y-1">
                 <Label className="text-xs">Locality / Area</Label>
                 <Select
-                  value={localityId ? String(localityId) : 'none'}
-                  onValueChange={(val) => setLocalityId(idFrom(val))}
+                  value={localityId === 'other' ? 'other' : localityId ? String(localityId) : 'none'}
+                  onValueChange={(val) => {
+                    if (val === 'other') {
+                      setLocalityId('other' as any);
+                    } else {
+                      setLocalityId(idFrom(val));
+                    }
+                  }}
                   disabled={!cityId || loadingLocalities}
                 >
                   <SelectTrigger><SelectValue placeholder={loadingLocalities ? 'Loading...' : 'Select locality'} /></SelectTrigger>
@@ -420,8 +447,17 @@ export function EditIssueDialog({
                     {localities.map((l) => (
                       <SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>
                     ))}
+                    <SelectItem value="other">Other / Not listed...</SelectItem>
                   </SelectContent>
                 </Select>
+                {localityId === ('other' as any) && (
+                  <Input
+                    placeholder="Enter Locality / Area name"
+                    value={customLocality}
+                    onChange={(e) => setCustomLocality(e.target.value)}
+                    className="mt-1 text-xs"
+                  />
+                )}
               </div>
             </div>
 

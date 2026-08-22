@@ -428,7 +428,7 @@ export async function updateProfile(
 
 export async function updateIssue(
   issueId: string,
-  updates: Partial<Pick<Issue, 'title' | 'description' | 'severity' | 'category_id' | 'subcategory_id' | 'state_id' | 'district_id' | 'city_id' | 'locality_id' | 'address' | 'pincode' | 'date_started' | 'frequency' | 'people_affected_estimate'>>
+  updates: Partial<Pick<Issue, 'title' | 'description' | 'severity' | 'category_id' | 'subcategory_id' | 'state_id' | 'district_id' | 'city_id' | 'locality_id' | 'custom_city' | 'custom_locality' | 'address' | 'pincode' | 'date_started' | 'frequency' | 'people_affected_estimate'>>
 ): Promise<Issue> {
   const { data, error } = await supabase.rpc('citizen_edit_issue', {
     p_issue_id: issueId,
@@ -446,6 +446,8 @@ export async function updateIssue(
     p_date_started: updates.date_started ?? null,
     p_frequency: updates.frequency ?? null,
     p_people_affected: updates.people_affected_estimate ?? null,
+    p_custom_city: updates.custom_city ?? null,
+    p_custom_locality: updates.custom_locality ?? null,
   });
 
   if (error) throw error;

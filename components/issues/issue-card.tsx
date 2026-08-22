@@ -6,9 +6,12 @@ import type { Issue } from '@/lib/types';
 import { formatRelativeTime } from '@/lib/format';
 
 export function IssueCard({ issue }: { issue: Issue }) {
-  const location = [issue.locality?.name, issue.city?.name, issue.district?.name, issue.state?.name]
+  const localityName = issue.custom_locality || issue.locality?.name;
+  const cityName = issue.custom_city || issue.city?.name;
+  const location = [localityName, cityName, issue.district?.name, issue.state?.name]
     .filter(Boolean)
     .join(', ');
+
 
 
   const evidenceCount = (issue as any).evidence_count ?? issue.issue_evidence?.length ?? 0;

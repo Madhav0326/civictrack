@@ -86,9 +86,12 @@ export function IssueDetail({ issue: initialIssue, categories = [], states = [] 
     loadData();
   }, [loadData]);
 
-  const location = [issue.locality?.name, issue.city?.name, issue.district?.name, issue.state?.name]
+  const localityName = issue.custom_locality || issue.locality?.name;
+  const cityName = issue.custom_city || issue.city?.name;
+  const location = [localityName, cityName, issue.district?.name, issue.state?.name]
     .filter(Boolean)
     .join(', ');
+
 
   const handleShare = async () => {
     const url = window.location.href;
