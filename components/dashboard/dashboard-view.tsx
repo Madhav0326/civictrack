@@ -10,12 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   BarChart3, CheckCircle2, Clock, Activity, AlertCircle, MapPin,
-  ArrowRight, ShieldCheck, TrendingUp, Layers, ChevronRight, Filter,
+  ArrowRight, ShieldCheck, TrendingUp, Layers, ChevronRight, ChevronLeft, Filter,
+  ArrowUp, ArrowDown, ArrowUpDown,
 } from 'lucide-react';
 import { fetchDistricts } from '@/lib/queries';
 import type { DashboardStats, StateBreakdown, DistrictBreakdown, TimeTrendItem } from '@/lib/queries';
 import type { Category, GeoState, GeoDistrict } from '@/lib/types';
 
+type StateSortField = 'name' | 'total' | 'resolved' | 'inProgress' | 'resolutionRate';
 
 interface DashboardViewProps {
   stats: DashboardStats | null;
@@ -49,6 +51,13 @@ export function DashboardView({
 
   const [districts, setDistricts] = useState<GeoDistrict[]>([]);
   const [loadingDistricts, setLoadingDistricts] = useState(false);
+
+  // State Table Sorting & Pagination
+  const [sortField, setSortField] = useState<StateSortField>('total');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const ITEMS_PER_PAGE = 10;
+
 
   const selectedState = states.find((s) => s.id === (currentStateId !== 'all' ? Number(currentStateId) : undefined));
 
@@ -106,6 +115,46 @@ export function DashboardView({
     return str ? `/issues?${str}` : '/issues';
   };
 
+  const handleSort = (field: StateSortField) => {
+    if (sortField === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortOrder(field === 'name' ? 'asc' : 'desc');
+    }
+    setCurrentPage(1);
+  };
+
+  const sortedStateBreakdown = [...stateBreakdown].sort((a, b) => {
+    let valA: string | number = a[sortField];
+    let valB: string | number = b[sortField];
+
+    if (typeof valA === 'string' && typeof valB === 'string') {
+      return sortOrder === 'asc'
+        ? valA.localeCompare(valB)
+        : valB.localeCompare(valA);
+    }
+
+    return sortOrder === 'asc'
+      ? (valA as number) - (valB as number)
+      : (valB as number) - (valA as number);
+  });
+
+  const totalPages = Math.max(1, Math.ceil(sortedStateBreakdown.length / ITEMS_PER_PAGE));
+  const paginatedStateBreakdown = sortedStateBreakdown.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  const renderSortIcon = (field: StateSortField) => {
+    if (sortField !== field) return <ArrowUpDown className="ml-1.5 h-3.5 w-3.5 opacity-40 inline shrink-0" />;
+    return sortOrder === 'asc' ? (
+      <ArrowUp className="ml-1.5 h-3.5 w-3.5 text-primary inline shrink-0" />
+    ) : (
+      <ArrowDown className="ml-1.5 h-3.5 w-3.5 text-primary inline shrink-0" />
+    );
+  };
+
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 space-y-8">
       {/* Header & Location Selector */}
@@ -155,86 +204,86 @@ export function DashboardView({
         </div>
       </div>
 
-      {/* Primary KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <Link href={buildIssuesUrl()} className="group">
-          <Card className="p-4 transition-all hover:shadow-md hover:border-primary/40 h-full">
-            <div className="flex items-center justify-between text-muted-foreground mb-1">
-              <span className="text-xs font-medium">Total Public Issues</span>
-              <Layers className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="text-2xl font-bold text-foreground">{total}</div>
-            <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-0.5">
-              View all issues <ChevronRight className="h-3 w-3" />
+      {/* KPI Overview Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="hover:border-primary/50 transition-colors">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Total Public Issues
+            </CardTitle>
+            <Layers className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{total.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-1 flex items-center justify-between">
+              <span>Reported across geography</span>
+              <Link href={buildIssuesUrl()} className="text-primary hover:underline font-medium">View all &rarr;</Link>
             </p>
-          </Card>
-        </Link>
+          </CardContent>
+        </Card>
 
-        <Link href={buildIssuesUrl({ status: 'resolved' })} className="group">
-          <Card className="p-4 transition-all hover:shadow-md hover:border-emerald-500/40 h-full">
-            <div className="flex items-center justify-between text-muted-foreground mb-1">
-              <span className="text-xs font-medium">Resolved Issues</span>
-              <CheckCircle2 className="h-4 w-4 text-emerald-500 group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{resolved}</div>
-            <p className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80 mt-1 flex items-center gap-0.5">
-              View resolved <ChevronRight className="h-3 w-3" />
+        <Card className="hover:border-emerald-500/50 transition-colors">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Resolved Issues
+            </CardTitle>
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-600">{resolved.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-1 flex items-center justify-between">
+              <span>{resolutionRate}% resolution rate</span>
+              <Link href={buildIssuesUrl({ status: 'resolved' })} className="text-emerald-600 hover:underline font-medium">Resolved &rarr;</Link>
             </p>
-          </Card>
-        </Link>
+          </CardContent>
+        </Card>
 
-        <Link href={buildIssuesUrl({ status: 'in_progress' })} className="group">
-          <Card className="p-4 transition-all hover:shadow-md hover:border-blue-500/40 h-full">
-            <div className="flex items-center justify-between text-muted-foreground mb-1">
-              <span className="text-xs font-medium">In Progress</span>
-              <Activity className="h-4 w-4 text-blue-500 group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{inProgress}</div>
-            <p className="text-[11px] text-blue-600/80 dark:text-blue-400/80 mt-1 flex items-center gap-0.5">
-              View in progress <ChevronRight className="h-3 w-3" />
+        <Card className="hover:border-blue-500/50 transition-colors">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              In Progress
+            </CardTitle>
+            <Activity className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{inProgress.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-1 flex items-center justify-between">
+              <span>Active authority action</span>
+              <Link href={buildIssuesUrl({ status: 'in_progress' })} className="text-blue-600 hover:underline font-medium">Active &rarr;</Link>
             </p>
-          </Card>
-        </Link>
+          </CardContent>
+        </Card>
 
-        <Link href={buildIssuesUrl({ status: 'unresolved' })} className="group">
-          <Card className="p-4 transition-all hover:shadow-md hover:border-amber-500/40 h-full">
-            <div className="flex items-center justify-between text-muted-foreground mb-1">
-              <span className="text-xs font-medium">Unresolved / Open</span>
-              <Clock className="h-4 w-4 text-amber-500 group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{unresolved}</div>
-            <p className="text-[11px] text-amber-600/80 dark:text-amber-400/80 mt-1 flex items-center gap-0.5">
-              View open issues <ChevronRight className="h-3 w-3" />
+        <Card className="hover:border-amber-500/50 transition-colors">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Pending / Unresolved
+            </CardTitle>
+            <Clock className="h-4 w-4 text-amber-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-amber-600">{unresolved.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-1 flex items-center justify-between">
+              <span>Awaiting resolution</span>
+              <Link href={buildIssuesUrl({ status: 'reported' })} className="text-amber-600 hover:underline font-medium">Pending &rarr;</Link>
             </p>
-          </Card>
-        </Link>
-
-        <Card className="p-4 col-span-2 lg:col-span-1">
-          <div className="flex items-center justify-between text-muted-foreground mb-1">
-            <span className="text-xs font-medium">Resolution Rate</span>
-            <TrendingUp className="h-4 w-4 text-primary" />
-          </div>
-          <div className="text-2xl font-bold text-primary">{total > 0 ? `${resolutionRate}%` : 'No data'}</div>
-          <p className="text-[11px] text-muted-foreground mt-1">
-            {total > 0 ? `${resolved} of ${total} issues resolved` : 'No issues recorded yet'}
-          </p>
+          </CardContent>
         </Card>
       </div>
 
-      {/* District Breakdown (When State Selected) */}
+      {/* District Breakdown Table (When a State is Selected) */}
       {currentStateId !== 'all' && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-primary" />
-              District Breakdown — {selectedState?.name} ({districtBreakdown.length} Districts)
+              <MapPin className="h-5 w-5 text-primary" /> District Breakdown for {selectedState?.name}
             </CardTitle>
-            <CardDescription>Metrics across districts in {selectedState?.name}.</CardDescription>
+            <CardDescription>Performance metrics across districts within {selectedState?.name}.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             {districtBreakdown.length === 0 ? (
-              <div className="p-8 text-center text-sm text-muted-foreground">
-                No districts recorded for {selectedState?.name}.
+              <div className="p-6 text-center text-sm text-muted-foreground">
+                No issues recorded for districts in this state yet.
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -246,7 +295,7 @@ export function DashboardView({
                       <TableHead className="text-right">Resolved</TableHead>
                       <TableHead className="text-right">In Progress</TableHead>
                       <TableHead className="text-right">Resolution Rate</TableHead>
-                      <TableHead className="text-right">Action</TableHead>
+                      <TableHead className="text-right">Explore</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -283,51 +332,136 @@ export function DashboardView({
       {/* State Comparison Table (When National View) */}
       {currentStateId === 'all' && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-primary" /> State-level Civic Comparison
-            </CardTitle>
-            <CardDescription>Public issue metrics across Indian States and Union Territories.</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-primary" /> State-level Civic Comparison
+              </CardTitle>
+              <CardDescription>Public issue metrics across Indian States and Union Territories.</CardDescription>
+            </div>
+            <span className="text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-md border">
+              10 states / page
+            </span>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>State / UT</TableHead>
-                    <TableHead className="text-right">Total Issues</TableHead>
-                    <TableHead className="text-right">Resolved</TableHead>
-                    <TableHead className="text-right">In Progress</TableHead>
-                    <TableHead className="text-right">Resolution Rate</TableHead>
+                    <TableHead
+                      className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                      onClick={() => handleSort('name')}
+                    >
+                      <div className="flex items-center">
+                        <span>State / UT</span>
+                        {renderSortIcon('name')}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      className="text-right cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                      onClick={() => handleSort('total')}
+                    >
+                      <div className="flex items-center justify-end">
+                        <span>Total Issues</span>
+                        {renderSortIcon('total')}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      className="text-right cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                      onClick={() => handleSort('resolved')}
+                    >
+                      <div className="flex items-center justify-end">
+                        <span>Resolved</span>
+                        {renderSortIcon('resolved')}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      className="text-right cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                      onClick={() => handleSort('inProgress')}
+                    >
+                      <div className="flex items-center justify-end">
+                        <span>In Progress</span>
+                        {renderSortIcon('inProgress')}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      className="text-right cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                      onClick={() => handleSort('resolutionRate')}
+                    >
+                      <div className="flex items-center justify-end">
+                        <span>Resolution Rate</span>
+                        {renderSortIcon('resolutionRate')}
+                      </div>
+                    </TableHead>
                     <TableHead className="text-right">Explore</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {stateBreakdown.map((st) => (
-                    <TableRow key={st.id}>
-                      <TableCell className="font-medium text-sm">
-                        <Link href={`/dashboard?state_id=${st.id}`} className="hover:underline text-primary">
-                          {st.name} <span className="text-xs text-muted-foreground">({st.code})</span>
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-right text-xs font-semibold">{st.total}</TableCell>
-                      <TableCell className="text-right text-xs text-emerald-600 font-semibold">{st.resolved}</TableCell>
-                      <TableCell className="text-right text-xs text-blue-600 font-semibold">{st.inProgress}</TableCell>
-                      <TableCell className="text-right text-xs font-semibold">
-                        {st.total > 0 ? `${st.resolutionRate}%` : '0%'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Link href={`/dashboard?state_id=${st.id}`}>
-                          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
-                            Drill Down <ChevronRight className="h-3 w-3" />
-                          </Button>
-                        </Link>
+                  {paginatedStateBreakdown.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-6 text-sm text-muted-foreground">
+                        No states found.
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    paginatedStateBreakdown.map((st) => (
+                      <TableRow key={st.id}>
+                        <TableCell className="font-medium text-sm">
+                          <Link href={`/dashboard?state_id=${st.id}`} className="hover:underline text-primary">
+                            {st.name} <span className="text-xs text-muted-foreground">({st.code})</span>
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-right text-xs font-semibold">{st.total}</TableCell>
+                        <TableCell className="text-right text-xs text-emerald-600 font-semibold">{st.resolved}</TableCell>
+                        <TableCell className="text-right text-xs text-blue-600 font-semibold">{st.inProgress}</TableCell>
+                        <TableCell className="text-right text-xs font-semibold">
+                          {st.total > 0 ? `${st.resolutionRate}%` : '0%'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Link href={`/dashboard?state_id=${st.id}`}>
+                            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
+                              Drill Down <ChevronRight className="h-3 w-3" />
+                            </Button>
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
+
+            {/* Pagination Controls */}
+            {sortedStateBreakdown.length > 0 && (
+              <div className="flex items-center justify-between border-t px-4 py-3 bg-muted/10">
+                <span className="text-xs text-muted-foreground">
+                  Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, sortedStateBreakdown.length)} of {sortedStateBreakdown.length} states
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs gap-1"
+                    disabled={currentPage <= 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" /> Previous
+                  </Button>
+                  <span className="text-xs font-medium px-2">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs gap-1"
+                    disabled={currentPage >= totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  >
+                    Next <ChevronRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
