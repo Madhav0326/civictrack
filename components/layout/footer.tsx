@@ -4,7 +4,8 @@ import { MapPin, Shield, FileText, Users } from 'lucide-react';
 export function Footer() {
   return (
     <footer className="border-t border-border bg-secondary/30">
-      <div className="container mx-auto max-w-7xl px-4 py-12 md:py-16">
+      {/* Top Footer Section */}
+      <div className="container mx-auto max-w-7xl px-4 pt-12 pb-10 md:pt-16 md:pb-12">
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-12">
           {/* Brand */}
           <div className="space-y-3">
@@ -50,11 +51,13 @@ export function Footer() {
             </ul>
           </div>
         </div>
+      </div>
 
-        {/* Bottom Section */}
-        <div className="mt-12 border-t border-border pt-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1.5 text-xs text-muted-foreground text-center sm:text-left">
+      {/* Compact Bottom Bar */}
+      <div className="border-t border-border/80 bg-muted/40 dark:bg-muted/20 py-5">
+        <div className="container mx-auto max-w-7xl px-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-1 text-[11px] leading-relaxed text-muted-foreground text-center md:text-left">
               <p>
                 &copy; {new Date().getFullYear()} CivicTrack. A politically neutral civic accountability platform.
               </p>
@@ -63,10 +66,10 @@ export function Footer() {
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground sm:justify-end shrink-0">
-              <span className="flex items-center gap-1.5"><Shield className="h-3.5 w-3.5 text-primary" /> Politically Neutral</span>
-              <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 text-primary" /> Community Driven</span>
-              <span className="flex items-center gap-1.5"><FileText className="h-3.5 w-3.5 text-primary" /> Evidence Based</span>
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[11px] text-muted-foreground md:justify-end shrink-0">
+              <span className="inline-flex items-center gap-1.5"><Shield className="h-3.5 w-3.5 text-primary" /> Politically Neutral</span>
+              <span className="inline-flex items-center gap-1.5"><Users className="h-3.5 w-3.5 text-primary" /> Community Driven</span>
+              <span className="inline-flex items-center gap-1.5"><FileText className="h-3.5 w-3.5 text-primary" /> Evidence Based</span>
             </div>
           </div>
         </div>
