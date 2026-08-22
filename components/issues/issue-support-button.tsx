@@ -6,6 +6,7 @@ import { Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/providers/auth-provider';
 import { supabase } from '@/lib/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface IssueSupportButtonProps {
   issueId: string;
@@ -31,7 +32,12 @@ export function IssueSupportButton({ issueId, publicId, initialCount = 0 }: Issu
         .eq('issue_id', issueId);
 
       if (countError) {
-        console.error('[IssueSupportButton] Error fetching supporter count:', countError.message);
+        console.error('[IssueSupportButton] Error fetching supporter count:', {
+          message: countError.message,
+          details: countError.details,
+          hint: countError.hint,
+          code: countError.code,
+        });
       } else if (exactCount !== null && exactCount !== undefined) {
         setCount(exactCount);
       }
@@ -46,7 +52,12 @@ export function IssueSupportButton({ issueId, publicId, initialCount = 0 }: Issu
           .maybeSingle();
 
         if (userError) {
-          console.error('[IssueSupportButton] Error checking user support status:', userError.message);
+          console.error('[IssueSupportButton] Error checking user support status:', {
+            message: userError.message,
+            details: userError.details,
+            hint: userError.hint,
+            code: userError.code,
+          });
         } else {
           setSupported(Boolean(data));
         }
@@ -75,12 +86,25 @@ export function IssueSupportButton({ issueId, publicId, initialCount = 0 }: Issu
 
     const request = wasSupported
       ? supabase.from('issue_supporters').delete().eq('issue_id', issueId).eq('user_id', user.id)
-      : supabase.from('issue_supporters').insert({ issue_id: issueId, user_id: user.id });
+      : supabase
+          .from('issue_supporters')
+          .insert({ issue_id: issueId, user_id: user.id })
+          .select();
 
     const { error } = await request;
 
     if (error) {
-      console.error('[IssueSupportButton] Error toggling support:', error.message || error);
+      console.error('[IssueSupportButton] Error toggling support:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
+      toast({
+        title: 'Action failed',
+        description: 'Unable to update your action. Please try again.',
+        variant: 'destructive',
+      });
       // Revert optimistic change on error
       setSupported(wasSupported);
       setCount((current) => Math.max(0, current + (wasSupported ? 1 : -1)));

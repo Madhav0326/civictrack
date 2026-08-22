@@ -6,6 +6,7 @@ import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/providers/auth-provider';
 import { supabase } from '@/lib/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface IssueFollowButtonProps {
   issueId: string;
@@ -31,7 +32,12 @@ export function IssueFollowButton({ issueId, publicId, initialCount = 0 }: Issue
         .eq('issue_id', issueId);
 
       if (countError) {
-        console.error('[IssueFollowButton] Error fetching follower count:', countError.message);
+        console.error('[IssueFollowButton] Error fetching follower count:', {
+          message: countError.message,
+          details: countError.details,
+          hint: countError.hint,
+          code: countError.code,
+        });
       } else if (exactCount !== null && exactCount !== undefined) {
         setCount(exactCount);
       }
@@ -46,7 +52,12 @@ export function IssueFollowButton({ issueId, publicId, initialCount = 0 }: Issue
           .maybeSingle();
 
         if (userError) {
-          console.error('[IssueFollowButton] Error checking user follow status:', userError.message);
+          console.error('[IssueFollowButton] Error checking user follow status:', {
+            message: userError.message,
+            details: userError.details,
+            hint: userError.hint,
+            code: userError.code,
+          });
         } else {
           setFollowing(Boolean(data));
         }
@@ -75,12 +86,25 @@ export function IssueFollowButton({ issueId, publicId, initialCount = 0 }: Issue
 
     const request = wasFollowing
       ? supabase.from('issue_followers').delete().eq('issue_id', issueId).eq('user_id', user.id)
-      : supabase.from('issue_followers').insert({ issue_id: issueId, user_id: user.id });
+      : supabase
+          .from('issue_followers')
+          .insert({ issue_id: issueId, user_id: user.id })
+          .select();
 
     const { error } = await request;
 
     if (error) {
-      console.error('[IssueFollowButton] Error toggling follow status:', error.message || error);
+      console.error('[IssueFollowButton] Error toggling follow status:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
+      toast({
+        title: 'Action failed',
+        description: 'Unable to update your action. Please try again.',
+        variant: 'destructive',
+      });
       // Revert optimistic change on error
       setFollowing(wasFollowing);
       setCount((current) => Math.max(0, current + (wasFollowing ? 1 : -1)));
