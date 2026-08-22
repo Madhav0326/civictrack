@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MapContainer } from '@/components/map/map-container';
-import { MapPin, SlidersHorizontal, Layers, X, ShieldCheck, RefreshCw, ChevronRight, AlertCircle, ArrowLeft } from 'lucide-react';
+import { MapPin, SlidersHorizontal, Layers, X, ShieldCheck, RefreshCw, AlertCircle } from 'lucide-react';
 import { fetchDistricts, fetchMapIssues } from '@/lib/queries';
 import type { MapIssueItem } from '@/lib/queries';
 import type { Category, GeoState, GeoDistrict } from '@/lib/types';
@@ -115,20 +115,8 @@ export function MapView({
             {selectedState ? `${selectedState.name} Civic Issue Map` : 'India Civic Issue Map'}
           </h1>
         </div>
-
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <Link href="/dashboard">
-            <Button variant="outline" size="sm" className="gap-1 text-xs">
-              <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
-            </Button>
-          </Link>
-          <Link href="/issues">
-            <Button variant="outline" size="sm" className="gap-1 text-xs">
-              List View <ChevronRight className="h-3.5 w-3.5" />
-            </Button>
-          </Link>
-        </div>
       </div>
+
 
       {/* Filter Bar */}
       <Card className="border-border">
