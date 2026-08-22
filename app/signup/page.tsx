@@ -136,6 +136,7 @@ export default function SignupPage() {
                 />
               </div>
             </div>
+            {/* 1. Password Field */}
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
@@ -159,31 +160,34 @@ export default function SignupPage() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+            </div>
 
+            {/* 2. Password Requirements */}
+            <div className="space-y-2 rounded-lg border bg-muted/30 p-3 text-xs">
+              <div className="flex items-center justify-between font-medium">
+                <span className="text-muted-foreground">Password requirements:</span>
+                {password.length > 0 && (
+                  <span className="font-semibold text-foreground">
+                    Strength: <span className="text-primary">{strength?.label}</span>
+                  </span>
+                )}
+              </div>
               {password.length > 0 && (
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Password strength:</span>
-                    <span className="font-medium">{strength?.label}</span>
-                  </div>
-                  <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-300 ${strength?.className}`}
-                      style={{
-                        width:
-                          strength?.label === 'Weak'
-                            ? '33%'
-                            : strength?.label === 'Fair'
-                            ? '66%'
-                            : '100%',
-                      }}
-                    />
-                  </div>
+                <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-300 ${strength?.className}`}
+                    style={{
+                      width:
+                        strength?.label === 'Weak'
+                          ? '33%'
+                          : strength?.label === 'Fair'
+                          ? '66%'
+                          : '100%',
+                    }}
+                  />
                 </div>
               )}
-
-              <div className="space-y-1 rounded-md bg-muted/40 p-2.5 text-xs">
-                <p className="font-medium text-muted-foreground mb-1">Password requirements:</p>
+              <div className="space-y-1.5 pt-1">
                 {PASSWORD_REQUIREMENTS.map((req, idx) => {
                   const passed = req.test(password);
                   return (
@@ -202,6 +206,7 @@ export default function SignupPage() {
               </div>
             </div>
 
+            {/* 3. Confirm Password Field */}
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
               <div className="relative">
@@ -229,6 +234,7 @@ export default function SignupPage() {
                 <p className="text-xs text-destructive">Passwords do not match.</p>
               )}
             </div>
+
 
             <Button
               type="submit"
