@@ -11,7 +11,8 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Lock, Eye, EyeOff, Check, X, ShieldCheck, LogOut, ArrowLeft, CheckCircle2, User, Mail, ShieldAlert } from 'lucide-react';
+import { Loader2, Lock, Eye, EyeOff, Check, X, ShieldCheck, LogOut, ArrowLeft, CheckCircle2, User, Mail, ShieldAlert, HelpCircle } from 'lucide-react';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 
 import { supabase } from '@/lib/supabase/client';
 import { updateProfile } from '@/lib/queries';
@@ -295,9 +296,43 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* 2. New Password */}
-            <div className="space-y-2">
-              <Label htmlFor="new-password">New Password</Label>
+            {/* 2. New Password with Info Popover & Progress Bar */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5">
+                <Label htmlFor="new-password">New Password</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground inline-flex items-center focus:outline-none"
+                      aria-label="View password requirements"
+                    >
+                      <HelpCircle className="h-3.5 w-3.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="top" align="start" className="w-64 p-3 text-xs space-y-2">
+                    <p className="font-semibold text-foreground border-b pb-1">Password requirements:</p>
+                    <div className="space-y-1.5 pt-0.5">
+                      {PASSWORD_REQUIREMENTS.map((req, idx) => {
+                        const passed = req.test(password);
+                        return (
+                          <div key={idx} className="flex items-center gap-1.5">
+                            {passed ? (
+                              <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                            ) : (
+                              <X className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            )}
+                            <span className={passed ? 'text-foreground font-medium' : 'text-muted-foreground'}>
+                              {req.label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -319,50 +354,29 @@ export default function SettingsPage() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-            </div>
 
-            {/* 3. Password Requirements */}
-            <div className="space-y-2 rounded-lg border bg-muted/30 p-3 text-xs">
-              <div className="flex items-center justify-between font-medium">
-                <span className="text-muted-foreground">Password requirements:</span>
-                {password.length > 0 && (
-                  <span className="font-semibold text-foreground">
-                    Strength: <span className="text-primary">{strength?.label}</span>
-                  </span>
-                )}
-              </div>
+              {/* Strength/Progress Bar directly below New Password Field */}
               {password.length > 0 && (
-                <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-300 ${strength?.className}`}
-                    style={{
-                      width:
-                        strength?.label === 'Weak'
-                          ? '33%'
-                          : strength?.label === 'Fair'
-                          ? '66%'
-                          : '100%',
-                    }}
-                  />
+                <div className="space-y-1 pt-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Strength:</span>
+                    <span className="font-semibold text-foreground">{strength?.label}</span>
+                  </div>
+                  <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-300 ${strength?.className}`}
+                      style={{
+                        width:
+                          strength?.label === 'Weak'
+                            ? '33%'
+                            : strength?.label === 'Fair'
+                            ? '66%'
+                            : '100%',
+                      }}
+                    />
+                  </div>
                 </div>
               )}
-              <div className="space-y-1.5 pt-1">
-                {PASSWORD_REQUIREMENTS.map((req, idx) => {
-                  const passed = req.test(password);
-                  return (
-                    <div key={idx} className="flex items-center gap-1.5">
-                      {passed ? (
-                        <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                      ) : (
-                        <X className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      )}
-                      <span className={passed ? 'text-foreground font-medium' : 'text-muted-foreground'}>
-                        {req.label}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
             </div>
 
             {/* 4. Confirm New Password */}
