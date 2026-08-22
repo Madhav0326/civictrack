@@ -24,24 +24,32 @@ export function IssueSupportButton({ issueId, publicId, initialCount = 0 }: Issu
     setCount(initialCount);
 
     const fetchState = async () => {
-      const { count: exactCount } = await supabase
+      // 1. Fetch exact total supporter count
+      const { count: exactCount, error: countError } = await supabase
         .from('issue_supporters')
         .select('id', { count: 'exact', head: true })
         .eq('issue_id', issueId);
 
-      if (exactCount !== null && exactCount !== undefined) {
+      if (countError) {
+        console.error('[IssueSupportButton] Error fetching supporter count:', countError.message);
+      } else if (exactCount !== null && exactCount !== undefined) {
         setCount(exactCount);
       }
 
+      // 2. Fetch current logged in user support status
       if (user) {
-        const { data } = await supabase
+        const { data, error: userError } = await supabase
           .from('issue_supporters')
           .select('id')
           .eq('issue_id', issueId)
           .eq('user_id', user.id)
           .maybeSingle();
 
-        setSupported(Boolean(data));
+        if (userError) {
+          console.error('[IssueSupportButton] Error checking user support status:', userError.message);
+        } else {
+          setSupported(Boolean(data));
+        }
       } else {
         setSupported(false);
       }
@@ -59,26 +67,35 @@ export function IssueSupportButton({ issueId, publicId, initialCount = 0 }: Issu
 
     setSaving(true);
     const wasSupported = supported;
-    setSupported(!wasSupported);
-    setCount((value) => Math.max(0, value + (wasSupported ? -1 : 1)));
+    const nextSupported = !wasSupported;
+
+    // Optimistic UI state
+    setSupported(nextSupported);
+    setCount((current) => Math.max(0, current + (wasSupported ? -1 : 1)));
 
     const request = wasSupported
       ? supabase.from('issue_supporters').delete().eq('issue_id', issueId).eq('user_id', user.id)
       : supabase.from('issue_supporters').insert({ issue_id: issueId, user_id: user.id });
 
     const { error } = await request;
+
     if (error) {
+      console.error('[IssueSupportButton] Error toggling support:', error.message || error);
+      // Revert optimistic change on error
       setSupported(wasSupported);
-      setCount((value) => Math.max(0, value + (wasSupported ? 1 : -1)));
+      setCount((current) => Math.max(0, current + (wasSupported ? 1 : -1)));
     } else {
+      // Re-fetch authoritative count from database
       const { count: freshCount } = await supabase
         .from('issue_supporters')
         .select('id', { count: 'exact', head: true })
         .eq('issue_id', issueId);
+
       if (freshCount !== null && freshCount !== undefined) {
         setCount(freshCount);
       }
     }
+
     setSaving(false);
   };
 

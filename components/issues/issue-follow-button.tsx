@@ -24,24 +24,32 @@ export function IssueFollowButton({ issueId, publicId, initialCount = 0 }: Issue
     setCount(initialCount);
 
     const fetchState = async () => {
-      const { count: exactCount } = await supabase
+      // 1. Fetch exact total follower count across all users
+      const { count: exactCount, error: countError } = await supabase
         .from('issue_followers')
         .select('id', { count: 'exact', head: true })
         .eq('issue_id', issueId);
 
-      if (exactCount !== null && exactCount !== undefined) {
+      if (countError) {
+        console.error('[IssueFollowButton] Error fetching follower count:', countError.message);
+      } else if (exactCount !== null && exactCount !== undefined) {
         setCount(exactCount);
       }
 
+      // 2. Fetch current logged in user follow status
       if (user) {
-        const { data } = await supabase
+        const { data, error: userError } = await supabase
           .from('issue_followers')
           .select('id')
           .eq('issue_id', issueId)
           .eq('user_id', user.id)
           .maybeSingle();
 
-        setFollowing(Boolean(data));
+        if (userError) {
+          console.error('[IssueFollowButton] Error checking user follow status:', userError.message);
+        } else {
+          setFollowing(Boolean(data));
+        }
       } else {
         setFollowing(false);
       }
@@ -59,26 +67,35 @@ export function IssueFollowButton({ issueId, publicId, initialCount = 0 }: Issue
 
     setSaving(true);
     const wasFollowing = following;
-    setFollowing(!wasFollowing);
-    setCount((value) => Math.max(0, value + (wasFollowing ? -1 : 1)));
+    const nextFollowing = !wasFollowing;
+
+    // Optimistic UI state
+    setFollowing(nextFollowing);
+    setCount((current) => Math.max(0, current + (wasFollowing ? -1 : 1)));
 
     const request = wasFollowing
       ? supabase.from('issue_followers').delete().eq('issue_id', issueId).eq('user_id', user.id)
       : supabase.from('issue_followers').insert({ issue_id: issueId, user_id: user.id });
 
     const { error } = await request;
+
     if (error) {
+      console.error('[IssueFollowButton] Error toggling follow status:', error.message || error);
+      // Revert optimistic change on error
       setFollowing(wasFollowing);
-      setCount((value) => Math.max(0, value + (wasFollowing ? 1 : -1)));
+      setCount((current) => Math.max(0, current + (wasFollowing ? 1 : -1)));
     } else {
+      // Re-fetch authoritative count from database
       const { count: freshCount } = await supabase
         .from('issue_followers')
         .select('id', { count: 'exact', head: true })
         .eq('issue_id', issueId);
+
       if (freshCount !== null && freshCount !== undefined) {
         setCount(freshCount);
       }
     }
+
     setSaving(false);
   };
 
