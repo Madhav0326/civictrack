@@ -311,28 +311,32 @@ export function IssueDetail({ issue: initialIssue, categories = [], states = [] 
           {/* Action card */}
           <Card>
             <CardContent className="p-4 space-y-3">
-              {user ? (
-                <>
-                  <IssueSupportButton issueId={issue.id} initialCount={issue.supporter_count} />
-                  <IssueFollowButton issueId={issue.id} initialCount={issue.follower_count} />
-                  {isOwner && (
-                    <div className="pt-2 border-t border-border">
-                      <p className="text-xs text-muted-foreground mb-1">You reported this issue</p>
-                      {!canEdit && (
-                        <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                          <Lock className="h-3 w-3" /> Issue is in official workflow
-                        </p>
-                      )}
-                    </div>
+              <IssueSupportButton
+                issueId={issue.id}
+                publicId={issue.public_id}
+                initialCount={issue.supporter_count}
+              />
+              <IssueFollowButton
+                issueId={issue.id}
+                publicId={issue.public_id}
+                initialCount={issue.follower_count}
+              />
+
+              {user && isOwner && (
+                <div className="pt-2 border-t border-border">
+                  <p className="text-xs text-muted-foreground mb-1">You reported this issue</p>
+                  {!canEdit && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                      <Lock className="h-3 w-3" /> Issue is in official workflow
+                    </p>
                   )}
-                </>
-              ) : (
-                <div className="space-y-2 text-center py-2">
-                  <p className="text-sm text-muted-foreground">Sign in to support, follow, and comment on this issue.</p>
-                  <Link href={`/login?redirect=/issues/${issue.public_id}`}>
-                    <Button size="sm" className="w-full">Sign in</Button>
-                  </Link>
                 </div>
+              )}
+
+              {!user && (
+                <p className="text-xs text-center text-muted-foreground pt-1">
+                  Sign in to support or follow this issue.
+                </p>
               )}
               <Separator />
               <Button variant="outline" size="sm" className="w-full gap-1" onClick={handleShare}>
