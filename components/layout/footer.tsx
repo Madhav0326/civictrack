@@ -4,20 +4,22 @@ import { MapPin, Shield, FileText, Users } from 'lucide-react';
 export function Footer() {
   return (
     <footer className="border-t border-border bg-secondary/30">
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-5">
-          <div className="col-span-2 md:col-span-2 space-y-3">
+      <div className="container mx-auto max-w-7xl px-4 py-12 md:py-16">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-12">
+          {/* Brand */}
+          <div className="space-y-3">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <MapPin className="h-4 w-4" />
               </div>
               <span className="font-bold tracking-tight text-foreground">CivicTrack</span>
             </div>
-            <p className="text-sm text-muted-foreground max-w-sm">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               A public civic accountability platform for India. Report, track, and verify issues in your community.
             </p>
           </div>
 
+          {/* Platform */}
           <div>
             <h3 className="text-sm font-semibold text-foreground">Platform</h3>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
@@ -28,6 +30,7 @@ export function Footer() {
             </ul>
           </div>
 
+          {/* Resources */}
           <div>
             <h3 className="text-sm font-semibold text-foreground">Resources</h3>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
@@ -37,6 +40,7 @@ export function Footer() {
             </ul>
           </div>
 
+          {/* Legal */}
           <div>
             <h3 className="text-sm font-semibold text-foreground">Legal</h3>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
@@ -47,20 +51,24 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 border-t border-border pt-6">
-          <div className="flex flex-col items-center justify-between gap-4 text-xs text-muted-foreground sm:flex-row">
-            <p className="text-center sm:text-left">
-              &copy; {new Date().getFullYear()} CivicTrack. A politically neutral civic accountability platform.
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:justify-end">
-              <span className="flex items-center gap-1"><Shield className="h-3 w-3 text-primary" /> Politically Neutral</span>
-              <span className="flex items-center gap-1"><Users className="h-3 w-3 text-primary" /> Community Driven</span>
-              <span className="flex items-center gap-1"><FileText className="h-3 w-3 text-primary" /> Evidence Based</span>
+        {/* Bottom Section */}
+        <div className="mt-12 border-t border-border pt-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1.5 text-xs text-muted-foreground text-center sm:text-left">
+              <p>
+                &copy; {new Date().getFullYear()} CivicTrack. A politically neutral civic accountability platform.
+              </p>
+              <p>
+                This platform is not an emergency response service. For emergencies, contact the appropriate emergency services (112 in India).
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground sm:justify-end shrink-0">
+              <span className="flex items-center gap-1.5"><Shield className="h-3.5 w-3.5 text-primary" /> Politically Neutral</span>
+              <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 text-primary" /> Community Driven</span>
+              <span className="flex items-center gap-1.5"><FileText className="h-3.5 w-3.5 text-primary" /> Evidence Based</span>
             </div>
           </div>
-          <p className="mt-4 text-center text-xs text-muted-foreground sm:text-left">
-            This platform is not an emergency response service. For emergencies, contact the appropriate emergency services (112 in India).
-          </p>
         </div>
       </div>
     </footer>
