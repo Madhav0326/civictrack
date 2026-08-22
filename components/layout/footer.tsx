@@ -4,9 +4,9 @@ import { MapPin, Shield, FileText, Users } from 'lucide-react';
 export function Footer() {
   return (
     <footer className="border-t border-border bg-secondary/30">
-      <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="sm:col-span-2 lg:col-span-2 space-y-3">
+      <div className="container mx-auto px-4 py-12">
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-5">
+          <div className="col-span-2 md:col-span-2 space-y-3">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <MapPin className="h-4 w-4" />
