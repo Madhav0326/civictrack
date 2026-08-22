@@ -797,18 +797,29 @@ export async function fetchMapIssues(filters?: {
 
 
 export async function fetchNotifications(): Promise<any[]> {
-
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return [];
 
   const { data, error } = await supabase
     .from('notifications')
-    .select('*, issue:issues(public_id, title), actor:profiles!notifications_actor_id_fkey(username, avatar_url)')
+    .select('*, issue:issues(public_id, title), actor:profiles(username, avatar_url)')
     .eq('user_id', userData.user.id)
     .order('created_at', { ascending: false })
     .limit(50);
 
-  if (error) throw error;
+  if (error) {
+    // Failsafe fallback query if schema relationship cache is unindexed
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('notifications')
+      .select('*, issue:issues(public_id, title)')
+      .eq('user_id', userData.user.id)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (fallbackError) throw fallbackError;
+    return fallbackData ?? [];
+  }
+
   return data ?? [];
 }
 
