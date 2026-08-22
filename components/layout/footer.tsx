@@ -21,11 +21,12 @@ export function Footer() {
           <div>
             <h3 className="text-sm font-semibold">Platform</h3>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/issues" className="hover:text-foreground">Browse Issues</Link></li>
               <li><Link href="/dashboard" className="hover:text-foreground">Civic Dashboard</Link></li>
+              <li><Link href="/issues" className="hover:text-foreground">Browse Issues</Link></li>
               <li><Link href="/map" className="hover:text-foreground">Civic Map</Link></li>
               <li><Link href="/report" className="hover:text-foreground">Report an Issue</Link></li>
             </ul>
+
           </div>
 
           <div>

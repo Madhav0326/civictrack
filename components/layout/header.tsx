@@ -22,11 +22,12 @@ import { cn } from '@/lib/utils';
 import { fetchUnreadNotificationCount } from '@/lib/queries';
 
 const navLinks = [
-  { href: '/issues', label: 'Issues', icon: Search },
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/issues', label: 'Issues', icon: Search },
   { href: '/map', label: 'Map', icon: MapIcon },
   { href: '/search', label: 'Search', icon: Search },
 ];
+
 
 export function Header() {
   const pathname = usePathname();
