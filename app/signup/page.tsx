@@ -49,11 +49,12 @@ export default function SignupPage() {
 
     setLoading(true);
 
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://civictrack-khaki.vercel.app';
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${origin}/auth/callback`,
         data: {
           username,
           full_name: fullName,
@@ -68,9 +69,10 @@ export default function SignupPage() {
       router.push('/');
       router.refresh();
     } else {
-      router.push('/login?message=check-email');
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     }
   };
+
 
   return (
     <div className="container mx-auto flex min-h-[calc(100vh-8rem)] max-w-md items-center px-4 py-12">

@@ -103,15 +103,16 @@ export default function LoginPage() {
             </Alert>
           )}
 
-          {messageParam === 'invalid-link' && (
+          {(messageParam === 'invalid-link' || messageParam === 'link-expired') && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Invalid or Expired Link</AlertTitle>
+              <AlertTitle>Invalid or Expired Verification Link</AlertTitle>
               <AlertDescription className="text-sm">
-                The email confirmation link is invalid or has expired. Enter your email below to resend a confirmation link.
+                The email confirmation link is invalid or has expired. Enter your email below to resend a new verification link.
               </AlertDescription>
             </Alert>
           )}
+
 
           {messageParam === 'password-reset' && (
             <Alert className="border-emerald-500/20 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300">
